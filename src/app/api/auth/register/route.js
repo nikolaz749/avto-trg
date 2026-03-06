@@ -16,7 +16,6 @@ export async function POST(request) {
 
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
-
     const username = normalizeUsername(body.username);
     const phoneRaw = String(body.phone || "").trim();
     const phone = phoneRaw.length ? phoneRaw : null;
@@ -30,12 +29,15 @@ export async function POST(request) {
 
     if (!username || username.length < 3) {
       return NextResponse.json(
-        { error: "Username je obvezen (min 3 znaki, brez presledkov)." },
+        { error: "Username mora imeti vsaj 3 znake." },
         { status: 400 }
       );
     }
 
-    const existingEmail = await prisma.user.findUnique({ where: { email } });
+    const existingEmail = await prisma.user.findUnique({
+      where: { email },
+    });
+
     if (existingEmail) {
       return NextResponse.json(
         { error: "Email je že registriran." },
@@ -43,7 +45,10 @@ export async function POST(request) {
       );
     }
 
-    const existingUsername = await prisma.user.findUnique({ where: { username } });
+    const existingUsername = await prisma.user.findUnique({
+      where: { username },
+    });
+
     if (existingUsername) {
       return NextResponse.json(
         { error: "Username je že zaseden." },
@@ -54,11 +59,23 @@ export async function POST(request) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
-      data: { email, passwordHash, username, phone },
-      select: { id: true, email: true, username: true, phone: true, createdAt: true },
+      data: {
+        email,
+        passwordHash,
+        username,
+        phone,
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+      },
     });
 
-    const token = await signToken({ id: user.id, email: user.email });
+    const token = await signToken({
+      id: user.id,
+      email: user.email,
+    });
 
     const res = NextResponse.json({ ok: true, user }, { status: 201 });
 
@@ -72,16 +89,11 @@ export async function POST(request) {
 
     return res;
   } catch (err) {
-    const msg = String(err?.message || "");
+    console.error("REGISTER ERROR:", err);
 
-    if (msg.includes("Unique constraint failed") && msg.includes("User_username_key")) {
-      return NextResponse.json({ error: "Username je že zaseden." }, { status: 400 });
-    }
-
-    if (msg.includes("Unique constraint failed") && msg.includes("User_email_key")) {
-      return NextResponse.json({ error: "Email je že registriran." }, { status: 400 });
-    }
-
-    return NextResponse.json({ error: "Napaka pri registraciji." }, { status: 500 });
+    return NextResponse.json(
+      { error: `Napaka pri registraciji: ${err?.message || "unknown"}` },
+      { status: 500 }
+    );
   }
 }
