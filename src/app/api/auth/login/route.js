@@ -26,7 +26,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Napačni podatki." }, { status: 401 });
     }
 
-    const token = await signToken({ sub: String(user.id), email: user.email });
+    const token = await signToken({ id: user.id, email: user.email });
 
     const res = NextResponse.json({ ok: true });
 
@@ -35,7 +35,7 @@ export async function POST(request) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 dni
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return res;
