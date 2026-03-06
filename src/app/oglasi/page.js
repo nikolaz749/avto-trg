@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -12,7 +12,7 @@ function eur(n) {
   }).format(Number(n || 0));
 }
 
-export default function OglasiPage() {
+function OglasiPageContent() {
   const sp = useSearchParams();
 
   const urlTip = sp.get("tip") || "avti";
@@ -391,5 +391,21 @@ export default function OglasiPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function OglasiPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="section">
+          <div className="container">
+            <div className="card stateCard">Nalagam oglase...</div>
+          </div>
+        </main>
+      }
+    >
+      <OglasiPageContent />
+    </Suspense>
   );
 }
