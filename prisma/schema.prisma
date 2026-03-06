@@ -3,67 +3,65 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
   passwordHash String
-  username     String   @unique
+  username     String     @unique
   phone        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  listings   Listing[]
-  favorites  Favorite[]
+  listings     Listing[]
+  favorites    Favorite[]
 }
 
 model Listing {
-  id        Int     @id @default(autoincrement())
-  title     String
-  price     Int
-  location  String
-  year      Int?
-  km        Int?
-  fuel      String
-  brand     String
-  model     String
-  condition String
-  type      String   // "avti" | "deli"
-  status    String   @default("ACTIVE") // ACTIVE | RESERVED | SOLD
+  id           Int            @id @default(autoincrement())
+  title        String
+  price        Int
+  location     String
+  year         Int?
+  km           Int?
+  fuel         String
+  brand        String
+  model        String
+  condition    String
+  type         String
+  status       String         @default("ACTIVE")
 
-  images    ListingImage[]
-  favorites Favorite[]
+  userId       Int
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // owner (kdo je objavil)
-  userId Int
-  user   User  @relation(fields: [userId], references: [id])
+  images       ListingImage[]
+  favorites    Favorite[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model ListingImage {
-  id       Int    @id @default(autoincrement())
-  url      String
-  publicId String
+  id           Int       @id @default(autoincrement())
+  url          String
+  publicId     String
+  listingId    Int
+  listing      Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
-  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  listingId Int
-
-  createdAt DateTime @default(now())
+  createdAt    DateTime  @default(now())
 }
 
 model Favorite {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  listingId Int
-  createdAt DateTime @default(now())
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  listingId    Int
+  createdAt    DateTime  @default(now())
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing      Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@unique([userId, listingId])
 }
