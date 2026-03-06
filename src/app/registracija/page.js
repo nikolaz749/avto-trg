@@ -10,7 +10,6 @@ export default function RegistracijaPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
-
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,7 +33,8 @@ export default function RegistracijaPage() {
         return;
       }
 
-      router.push("/prijava");
+      router.push("/oglasi");
+      router.refresh();
     } catch {
       setErr("Napaka pri povezavi s strežnikom.");
     } finally {
@@ -48,6 +48,7 @@ export default function RegistracijaPage() {
         <h1 className="h2" style={{ marginBottom: 6 }}>
           Registracija
         </h1>
+
         <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 14 }}>
           Ustvari račun (email + username + geslo). Telefon je opcijski.
         </div>
@@ -79,6 +80,7 @@ export default function RegistracijaPage() {
               required
               minLength={3}
             />
+
             <div style={{ fontSize: 12, color: "var(--muted)", marginTop: -6 }}>
               Brez presledkov, min 3 znaki (priporočeno: male črke + številke).
             </div>
@@ -104,7 +106,7 @@ export default function RegistracijaPage() {
               minLength={6}
             />
 
-            <button className="btn btn-primary" type="submit" disabled={loading}>
+            <button className="btn btnPrimary" type="submit" disabled={loading}>
               {loading ? "Ustvarjam..." : "Ustvari račun"}
             </button>
           </form>
