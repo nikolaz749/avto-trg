@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -22,129 +23,158 @@ export default function HomePage() {
   const [model, setModel] = useState("Golf");
   const [condition, setCondition] = useState("rabljeno");
 
-  const models = MAKES[make];
+  const models = MAKES[make] || [];
 
   function goSearch() {
     const params = new URLSearchParams();
     params.set("znamka", make);
     params.set("model", model);
     params.set("stanje", condition);
-
     router.push(`/oglasi?${params.toString()}`);
   }
 
   return (
-    <main style={styles.wrapper}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>AVTO TRG</h1>
-        <p style={styles.subtitle}>
-          Oglasi za avtomobile in avtomobilske dele
-        </p>
+    <main>
+      <section className="hero">
+        <div className="container heroGrid">
+          <div className="card heroCard">
+            <div className="heroBadge">Marketplace za avtomobile in dele</div>
 
-        <div style={styles.form}>
-          <select
-            value={condition}
-            onChange={(e) => setCondition(e.target.value)}
-            style={styles.input}
-          >
-            <option value="rabljeno">Rabljeno</option>
-            <option value="novo">Novo</option>
-          </select>
+            <h1 className="hTitle">
+              Najdi svoj naslednji avto
+              <br />
+              ali objavi oglas v minuti.
+            </h1>
 
-          <select
-            value={make}
-            onChange={(e) => {
-              setMake(e.target.value);
-              setModel(MAKES[e.target.value][0]);
-            }}
-            style={styles.input}
-          >
-            {Object.keys(MAKES).map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
+            <p className="hSub">
+              Prebrskaj oglase za rabljena in nova vozila, primerjaj ponudbo
+              in hitro objavi svoj avto ali dele na Avto Trg.
+            </p>
 
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            style={styles.input}
-          >
-            {models.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
+            <div className="heroSearch card">
+              <div className="tabs">
+                <button
+                  type="button"
+                  className={`tab ${condition === "rabljeno" ? "tabActive" : ""}`}
+                  onClick={() => setCondition("rabljeno")}
+                >
+                  Rabljeno
+                </button>
 
-          <button onClick={goSearch} style={styles.button}>
-            Poišči oglase
-          </button>
+                <button
+                  type="button"
+                  className={`tab ${condition === "novo" ? "tabActive" : ""}`}
+                  onClick={() => setCondition("novo")}
+                >
+                  Novo
+                </button>
+              </div>
+
+              <div className="grid3 heroFormGrid">
+                <select
+                  value={make}
+                  onChange={(e) => {
+                    const nextMake = e.target.value;
+                    setMake(nextMake);
+                    setModel(MAKES[nextMake][0]);
+                  }}
+                  className="select"
+                >
+                  {Object.keys(MAKES).map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="select"
+                >
+                  {models.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+
+                <button type="button" className="btn btnPrimary heroSearchBtn" onClick={goSearch}>
+                  Poišči oglase
+                </button>
+              </div>
+
+              <p className="smallMuted">
+                Hitro iskanje po znamki, modelu in stanju vozila.
+              </p>
+            </div>
+
+            <div className="heroActions">
+              <Link href="/objavi" className="btn btnPrimary">
+                Objavi oglas
+              </Link>
+
+              <Link href="/oglasi" className="btn">
+                Poglej vse oglase
+              </Link>
+            </div>
+          </div>
+
+          <div className="banner">
+            <div>
+              <h3>Prodaj hitreje. Kupi pametneje.</h3>
+              <p>
+                Preprosto objavi oglas, dodaj fotografije, spremljaj favorite in
+                pregleduj ponudbo vozil ter delov na enem mestu.
+              </p>
+            </div>
+
+            <div className="heroStats">
+              <div className="statCard">
+                <strong>✓ Več slik</strong>
+                <span>Dodaj več slik in bolje predstavi svoje vozilo</span>
+              </div>
+
+              <div className="statCard">
+                <strong>✓ Favoriti</strong>
+                <span>Shrani zanimive oglase za kasneje</span>
+              </div>
+
+              <div className="statCard">
+                <strong>✓ Status oglasa</strong>
+                <span>ACTIVE, RESERVED ali SOLD</span>
+              </div>
+            </div>
+
+            <div className="bannerBottom">
+              <Link href="/oglasi" className="btn">
+                Razišči oglase
+              </Link>
+              <Link href="/objavi" className="btn btnPrimary">
+                Začni prodajati
+              </Link>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <div style={styles.actions}>
-          <a href="/objavi" style={styles.linkPrimary}>
-            Objavi oglas
-          </a>
-          <a href="/oglasi" style={styles.link}>
-            Poglej vse oglase
-          </a>
+      <section className="section">
+        <div className="container">
+          <h2 className="h2">Priljubljene znamke</h2>
+
+          <div className="chips">
+            {Object.keys(MAKES).map((makeName) => (
+              <Link
+                key={makeName}
+                href={`/oglasi?znamka=${encodeURIComponent(makeName)}`}
+                className="chip"
+              >
+                {makeName}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
-
-const styles = {
-  wrapper: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "#111",
-    color: "white",
-    fontFamily: "system-ui",
-  },
-  card: {
-    background: "#1a1a1a",
-    padding: 40,
-    borderRadius: 12,
-    width: 400,
-  },
-  title: {
-    marginBottom: 10,
-  },
-  subtitle: {
-    marginBottom: 30,
-    opacity: 0.7,
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-  },
-  input: {
-    padding: 10,
-    borderRadius: 6,
-    border: "none",
-  },
-  button: {
-    padding: 12,
-    borderRadius: 6,
-    border: "none",
-    background: "#2563eb",
-    color: "white",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  actions: {
-    marginTop: 25,
-    display: "flex",
-    justifyContent: "space-between",
-  },
-  linkPrimary: {
-    color: "#60a5fa",
-    textDecoration: "none",
-  },
-  link: {
-    color: "#aaa",
-    textDecoration: "none",
-  },
-};

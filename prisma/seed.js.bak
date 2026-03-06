@@ -1,0 +1,56 @@
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  await prisma.listing.deleteMany();
+
+  await prisma.listing.createMany({
+    data: [
+      {
+        title: "BMW 320d M Sport",
+        price: 16500,
+        location: "Ljubljana",
+        year: 2016,
+        km: 178000,
+        fuel: "Diesel",
+        brand: "BMW",
+        model: "320d",
+        condition: "rabljeno",
+        type: "avti",
+      },
+      {
+        title: "Audi A4 2.0 TDI",
+        price: 14200,
+        location: "Maribor",
+        year: 2015,
+        km: 210000,
+        fuel: "Diesel",
+        brand: "Audi",
+        model: "A4",
+        condition: "rabljeno",
+        type: "avti",
+      },
+      {
+        title: "Platišča 18” 5x112",
+        price: 350,
+        location: "Koper",
+        year: 2020,
+        km: 0,
+        fuel: "-",
+        brand: "Univerzalno",
+        model: "18",
+        condition: "novo",
+        type: "deli",
+      },
+    ],
+  });
+}
+
+main()
+  .then(() => prisma.$disconnect())
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

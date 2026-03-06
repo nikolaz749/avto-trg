@@ -1,25 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { LISTINGS } from "../lib/listings";
 import Link from "next/link";
+
 function eur(n) {
   return new Intl.NumberFormat("sl-SI", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0,
-  }).format(n);
+  }).format(Number(n || 0));
 }
 
 export default function OglasiPage() {
   const sp = useSearchParams();
 
-  // URL parametri (če jih ni, damo default)
   const urlTip = sp.get("tip") || "avti";
   const urlQ = sp.get("q") || "";
 
-  // Lokalni state (da lahko filter spreminjaš brez reload)
   const [tip, setTip] = useState(urlTip);
   const [q, setQ] = useState(urlQ);
   const [make, setMake] = useState("");
@@ -27,196 +25,371 @@ export default function OglasiPage() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 
-  // Znamke iz baze (glede na tip)
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+
+        const res = await fetch(`/api/oglasi?page=${page}&limit=12`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+
+        if (!cancelled) {
+          setListings(Array.isArray(data.items) ? data.items : []);
+          setTotalPages(data.totalPages ?? 1);
+        }
+
+        try {
+          const favRes = await fetch("/api/favorites/ids", {
+            cache: "no-store",
+          });
+          const favData = await favRes.json();
+
+          if (!cancelled) {
+            setFavoriteIds(new Set(Array.isArray(favData.ids) ? favData.ids : []));
+          }
+        } catch {
+          if (!cancelled) setFavoriteIds(new Set());
+        }
+      } catch {
+        if (!cancelled) {
+          setListings([]);
+          setTotalPages(1);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [page]);
+
+  async function toggleFavorite(listingId) {
+    try {
+      const res = await fetch("/api/favorites/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        alert(data?.error || "Napaka pri favoritih.");
+        return;
+      }
+
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (data.favorited) next.add(listingId);
+        else next.delete(listingId);
+        return next;
+      });
+    } catch {
+      alert("Napaka pri povezavi s strežnikom.");
+    }
+  }
+
   const makes = useMemo(() => {
     const set = new Set();
-    LISTINGS.filter((x) => x.type === tip).forEach((x) => {
-      if (x.make) set.add(x.make);
-    });
+
+    listings
+      .filter((x) => x.type === tip)
+      .forEach((x) => {
+        if (x.brand) set.add(x.brand);
+      });
+
     return Array.from(set).sort();
-  }, [tip]);
+  }, [listings, tip]);
 
   const models = useMemo(() => {
     const set = new Set();
-    LISTINGS.filter((x) => x.type === tip)
-      .filter((x) => (make ? x.make === make : true))
+
+    listings
+      .filter((x) => x.type === tip)
+      .filter((x) => (make ? x.brand === make : true))
       .forEach((x) => {
         if (x.model) set.add(x.model);
       });
-    return Array.from(set).sort();
-  }, [tip, make]);
 
-  // Filtrirani rezultati
+    return Array.from(set).sort();
+  }, [listings, tip, make]);
+
   const results = useMemo(() => {
     const qq = q.trim().toLowerCase();
     const min = minPrice ? Number(minPrice) : null;
     const max = maxPrice ? Number(maxPrice) : null;
 
-    return LISTINGS.filter((x) => x.type === tip)
-      .filter((x) => (qq ? (x.title + " " + x.location).toLowerCase().includes(qq) : true))
-      .filter((x) => (make ? x.make === make : true))
+    return listings
+      .filter((x) => x.type === tip)
+      .filter((x) =>
+        qq ? `${x.title} ${x.location || ""}`.toLowerCase().includes(qq) : true
+      )
+      .filter((x) => (make ? x.brand === make : true))
       .filter((x) => (model ? x.model === model : true))
       .filter((x) => (min != null ? x.price >= min : true))
       .filter((x) => (max != null ? x.price <= max : true));
-  }, [tip, q, make, model, minPrice, maxPrice]);
+  }, [listings, tip, q, make, model, minPrice, maxPrice]);
 
   return (
-    <>
-      <header className="topbar">
-        <div className="container">
-          <div className="nav">
-            <a className="brand" href="/">
-              <div className="logo" />
-              <span>Avto Trg</span>
-            </a>
-
-            <nav className="navlinks">
-              <a href="/oglasi?tip=avti">Avti</a>
-              <a href="/oglasi?tip=deli">Deli</a>
-              <a href="/objavi">Objavi</a>
-            </nav>
-
-            <div className="actions">
-              <a className="btn btnPrimary" href="/objavi">
-                + Objavi
-              </a>
-            </div>
+    <main className="section">
+      <div className="container">
+        <div className="listingsTop">
+          <div>
+            <h1 className="listingsTitle">Oglasi</h1>
+            <p className="listingsMeta">
+              Tip: <strong>{tip === "avti" ? "Avti" : "Deli & oprema"}</strong>
+              <span className="listingsDot">•</span>
+              Najdeno: <strong>{results.length}</strong>
+            </p>
           </div>
         </div>
-      </header>
 
-      <main className="section">
-        <div className="container">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", marginBottom: 12 }}>
-            <div>
-              <h2 className="h2" style={{ marginBottom: 6 }}>Oglasi</h2>
-              <div style={{ color: "var(--muted)", fontSize: 13 }}>
-                Tip: <b>{tip === "avti" ? "Avti" : "Deli & oprema"}</b> • Najdeno: <b>{results.length}</b>
-              </div>
-            </div>
-            <a className="btn" href="/">← Nazaj</a>
-          </div>
-
-          <div className="listGrid">
-            <aside className="card">
-              <div style={{ fontWeight: 800, marginBottom: 10 }}>Filtri</div>
-
-              <label style={{ fontSize: 12, color: "var(--muted)" }}>Tip</label>
-              <select
-                className="select"
-                value={tip}
-                onChange={(e) => {
-                  setTip(e.target.value);
-                  setMake("");
-                  setModel("");
-                }}
-              >
-                <option value="avti">Avti</option>
-                <option value="deli">Deli</option>
-              </select>
-
-              <div style={{ height: 10 }} />
-
-              <label style={{ fontSize: 12, color: "var(--muted)" }}>Iskanje</label>
-              <input
-                className="input"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="npr. Golf, platišča..."
-              />
-
-              <div style={{ height: 10 }} />
-
-              <label style={{ fontSize: 12, color: "var(--muted)" }}>Znamka</label>
-              <select
-                className="select"
-                value={make}
-                onChange={(e) => {
-                  setMake(e.target.value);
-                  setModel("");
-                }}
-              >
-                <option value="">Vse znamke</option>
-                {makes.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ height: 10 }} />
-
-              <label style={{ fontSize: 12, color: "var(--muted)" }}>Model</label>
-              <select
-                className="select"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                disabled={!make}
-              >
-                <option value="">{make ? "Vsi modeli" : "Najprej izberi znamko"}</option>
-                {models.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ height: 10 }} />
-
-              <label style={{ fontSize: 12, color: "var(--muted)" }}>Cena (EUR)</label>
-              <div className="grid2">
-                <input className="input" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="min" />
-                <input className="input" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="max" />
+        <div className="layout">
+          <aside className="sidebar">
+            <div className="card filtersCard">
+              <div className="filtersHeader">
+                <div className="filtersTitle">Filtri</div>
+                <div className="filtersHint">Prilagodi prikaz oglasov</div>
               </div>
 
-              <div style={{ height: 10 }} />
+              <div className="filterGroup">
+                <label className="filterLabel">Tip</label>
+                <select
+                  className="select"
+                  value={tip}
+                  onChange={(e) => {
+                    setTip(e.target.value);
+                    setMake("");
+                    setModel("");
+                    setPage(1);
+                  }}
+                >
+                  <option value="avti">Avti</option>
+                  <option value="deli">Deli</option>
+                </select>
+              </div>
+
+              <div className="filterGroup">
+                <label className="filterLabel">Iskanje</label>
+                <input
+                  className="input"
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="npr. Golf, platišča..."
+                />
+              </div>
+
+              <div className="filterGroup">
+                <label className="filterLabel">Znamka</label>
+                <select
+                  className="select"
+                  value={make}
+                  onChange={(e) => {
+                    setMake(e.target.value);
+                    setModel("");
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Vse znamke</option>
+                  {makes.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="filterGroup">
+                <label className="filterLabel">Model</label>
+                <select
+                  className="select"
+                  value={model}
+                  onChange={(e) => {
+                    setModel(e.target.value);
+                    setPage(1);
+                  }}
+                  disabled={!make}
+                >
+                  <option value="">
+                    {make ? "Vsi modeli" : "Najprej izberi znamko"}
+                  </option>
+                  {models.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="filterGroup">
+                <label className="filterLabel">Cena (EUR)</label>
+                <div className="priceRow">
+                  <input
+                    className="input"
+                    value={minPrice}
+                    onChange={(e) => {
+                      setMinPrice(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="min"
+                  />
+                  <input
+                    className="input"
+                    value={maxPrice}
+                    onChange={(e) => {
+                      setMaxPrice(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="max"
+                  />
+                </div>
+              </div>
+
               <button
-                className="btn"
+                className="btn filtersReset"
+                type="button"
                 onClick={() => {
                   setQ("");
                   setMake("");
                   setModel("");
                   setMinPrice("");
                   setMaxPrice("");
+                  setPage(1);
                 }}
               >
                 Počisti filtre
               </button>
 
-              <p className="smallMuted">
-                Naslednji korak: podrobnosti oglasa + prava baza.
+              <p className="smallMuted filtersFoot">
+                {loading ? "Nalagam oglase..." : "Prikaz rezultatov iz baze."}
               </p>
-            </aside>
+            </div>
+          </aside>
 
-            <section style={{ display: "grid", gap: 12 }}>
-        {results.map((x) => (
-  <Link
-    href={`/oglasi/${x.id}`}
-    key={x.id}
-    style={{ textDecoration: "none", color: "inherit" }}
-  >
-    <div className="item">
-      <div className="thumb" />
-      <div>
-        <p className="itemTitle">{x.title}</p>
-        <p className="itemMeta">
-          {x.location}
-          {x.year ? ` • ${x.year}` : ""}
-          {x.km ? ` • ${x.km.toLocaleString("sl-SI")} km` : ""}
-          {x.fuel ? ` • ${x.fuel}` : ""}
-          {x.condition ? ` • ${x.condition}` : ""}
-        </p>
-        <div className="price">{eur(x.price)}</div>
-      </div>
-    </div>
-  </Link>
-))}
+          <section>
+            {loading && <div className="card stateCard">Nalagam oglase...</div>}
 
-              {results.length === 0 && <div className="card">Ni zadetkov. Poskusi spremeniti filtre.</div>}
-            </section>
-          </div>
+            {!loading && results.length === 0 && (
+              <div className="card stateCard">
+                Ni zadetkov. Poskusi spremeniti filtre.
+              </div>
+            )}
+
+            {!loading && results.length > 0 && (
+              <>
+                <div className="gridListings">
+                  {results.map((x) => (
+                    <Link
+                      href={`/oglasi/${x.id}`}
+                      key={x.id}
+                      className="listingLink"
+                    >
+                      <article className="card listingCard">
+                        <div className="listingThumbWrap">
+                          {x.images?.[0]?.url ? (
+                            <img
+                              src={x.images[0].url}
+                              alt={x.title || "Oglas"}
+                              className="listingThumb"
+                            />
+                          ) : (
+                            <div className="listingThumbPlaceholder">
+                              Brez slike
+                            </div>
+                          )}
+
+                          {x.status === "SOLD" && (
+                            <div className="statusBadge statusSold">PRODANO</div>
+                          )}
+
+                          {x.status === "RESERVED" && (
+                            <div className="statusBadge statusReserved">
+                              REZERVIRANO
+                            </div>
+                          )}
+
+                          {x.status === "ACTIVE" && (
+                            <div className="statusBadge statusActive">AKTIVNO</div>
+                          )}
+
+                          <button
+                            type="button"
+                            title="Dodaj med favoriti"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleFavorite(x.id);
+                            }}
+                            className={`favoriteBtn ${
+                              favoriteIds.has(x.id) ? "favoriteBtnActive" : ""
+                            }`}
+                          >
+                            {favoriteIds.has(x.id) ? "❤" : "♡"}
+                          </button>
+                        </div>
+
+                        <div className="listingBody">
+                          <h3 className="listingTitle">{x.title}</h3>
+
+                          <div className="listingMeta">
+                            {x.location || "Lokacija ni navedena"}
+                            {x.year ? ` • ${x.year}` : ""}
+                            {x.km
+                              ? ` • ${Number(x.km).toLocaleString("sl-SI")} km`
+                              : ""}
+                          </div>
+
+                          <div className="listingPrice">{eur(x.price)}</div>
+                        </div>
+                      </article>
+                    </Link>
+                  ))}
+                </div>
+
+                <div className="paginationWrap">
+                  <button
+                    className="btn paginationBtn"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    ← Prejšnja
+                  </button>
+
+                  <div className="paginationInfo">
+                    Stran <strong>{page}</strong> / <strong>{totalPages}</strong>
+                  </div>
+
+                  <button
+                    className="btn paginationBtn"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Naslednja →
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
         </div>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }

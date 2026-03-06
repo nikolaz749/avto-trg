@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { LISTINGS } from "../../lib/listings";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import DeleteButton from "./DeleteButton";
 
 function eur(n) {
   return new Intl.NumberFormat("sl-SI", {
@@ -9,91 +13,343 @@ function eur(n) {
   }).format(Number(n || 0));
 }
 
-export default async function OglasDetailPage({ params }) {
-  // ✅ v tvojem primeru je params Promise -> rabimo await
-  const { id } = await params;
+export default function OglasDetailPage() {
+  const params = useParams();
+  const id = params?.id;
 
-  const oglas = LISTINGS.find((x) => String(x.id) === String(id));
+  const [oglas, setOglas] = useState(null);
+  const [user, setUser] = useState(null);
 
-  if (!oglas) {
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [showPhone, setShowPhone] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setNotFound(false);
+
+        const [resOglas, resMe] = await Promise.all([
+          fetch(`/api/oglasi/${id}`, { cache: "no-store" }),
+          fetch(`/api/auth/me`, { cache: "no-store" }),
+        ]);
+
+        if (resOglas.status === 404) {
+          if (!cancelled) setNotFound(true);
+          return;
+        }
+
+        if (!resOglas.ok) {
+          if (!cancelled) setNotFound(true);
+          return;
+        }
+
+        const dataOglas = await resOglas.json();
+
+        let dataMe = { user: null };
+        try {
+          dataMe = await resMe.json();
+        } catch {
+          dataMe = { user: null };
+        }
+
+        if (!cancelled) {
+          setOglas(dataOglas);
+          setUser(dataMe?.user || null);
+          setActiveIdx(0);
+          setShowPhone(false);
+        }
+      } catch {
+        if (!cancelled) setNotFound(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    if (id) load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (loading) {
     return (
       <main className="section">
         <div className="container">
-          <h2 className="h2">Oglas ne obstaja</h2>
-          <p className="smallMuted">
-            ID: <b>{String(id)}</b>
-          </p>
-          <Link href="/oglasi" className="btn">
-            ← Nazaj na oglase
-          </Link>
+          <div className="card stateCard">Nalagam oglas...</div>
         </div>
       </main>
     );
   }
 
+  if (notFound || !oglas) {
+    return (
+      <main className="section">
+        <div className="container">
+          <div className="detailBackWrap">
+            <Link href="/oglasi" className="btn">
+              ← Nazaj na oglase
+            </Link>
+          </div>
+
+          <div className="card stateCard">
+            <h2 className="h2">Oglas ne obstaja</h2>
+            <p className="smallMuted">ID: {String(id)}</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const isOwner =
+    user?.id && oglas.userId && Number(user.id) === Number(oglas.userId);
+
+  const images = Array.isArray(oglas.images) ? oglas.images : [];
+  const mainUrl = images?.[activeIdx]?.url || images?.[0]?.url || "";
+
   return (
     <main className="section">
       <div className="container">
-        <Link href="/oglasi" className="btn" style={{ marginBottom: 16 }}>
-          ← Nazaj
-        </Link>
+        <div className="detailBackWrap">
+          <Link href="/oglasi" className="btn">
+            ← Nazaj
+          </Link>
+        </div>
 
-        <div className="card" style={{ padding: 24 }}>
-          <h1 className="h2" style={{ marginBottom: 8 }}>
-            {oglas.title}
-          </h1>
-
-          <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 18 }}>
-            {eur(oglas.price)}
-          </div>
-
-          <div style={{ display: "grid", gap: 8 }}>
+        <div className="detailTopCard card">
+          <div className="detailTopHeader">
             <div>
-              <b>Tip:</b> {oglas.type}
-            </div>
-            <div>
-              <b>Lokacija:</b> {oglas.location}
+              <h1 className="detailTitle">{oglas.title}</h1>
+              <div className="detailMeta">
+                {oglas.location || "Lokacija ni navedena"}
+                {oglas.year ? ` • ${oglas.year}` : ""}
+                {oglas.km
+                  ? ` • ${Number(oglas.km).toLocaleString("sl-SI")} km`
+                  : ""}
+              </div>
             </div>
 
-            {oglas.year != null && (
-              <div>
-                <b>Letnik:</b> {oglas.year}
-              </div>
-            )}
+            <div className="detailPriceBlock">
+              <div className="detailPrice">{eur(oglas.price)}</div>
 
-            {oglas.km != null && (
-              <div>
-                <b>Kilometri:</b> {Number(oglas.km).toLocaleString("sl-SI")} km
-              </div>
-            )}
+              {oglas.status === "ACTIVE" && (
+                <div className="statusBadge statusActive detailStatusBadge">
+                  AKTIVNO
+                </div>
+              )}
 
-            {oglas.fuel && (
-              <div>
-                <b>Gorivo:</b> {oglas.fuel}
-              </div>
-            )}
+              {oglas.status === "RESERVED" && (
+                <div className="statusBadge statusReserved detailStatusBadge">
+                  REZERVIRANO
+                </div>
+              )}
 
-            {oglas.make && (
-              <div>
-                <b>Znamka:</b> {oglas.make}
-              </div>
-            )}
-
-            {oglas.model && (
-              <div>
-                <b>Model:</b> {oglas.model}
-              </div>
-            )}
-
-            {oglas.condition && (
-              <div>
-                <b>Stanje:</b> {oglas.condition}
-              </div>
-            )}
+              {oglas.status === "SOLD" && (
+                <div className="statusBadge statusSold detailStatusBadge">
+                  PRODANO
+                </div>
+              )}
+            </div>
           </div>
 
-          <div style={{ marginTop: 24 }}>
-            <button className="btn btnPrimary">Kontaktiraj prodajalca</button>
+          <div className="detailLayout">
+            <section className="detailMain">
+              {images.length > 0 && (
+                <div className="detailGallery">
+                  <div className="detailMainImageWrap">
+                    <img
+                      src={mainUrl}
+                      alt={oglas.title || "Slika oglasa"}
+                      className="detailMainImage"
+                    />
+
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveIdx(
+                              (i) => (i - 1 + images.length) % images.length
+                            )
+                          }
+                          className="galleryArrow galleryArrowLeft"
+                          aria-label="Prejšnja slika"
+                        >
+                          ‹
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setActiveIdx((i) => (i + 1) % images.length)}
+                          className="galleryArrow galleryArrowRight"
+                          aria-label="Naslednja slika"
+                        >
+                          ›
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {images.length > 1 && (
+                    <div className="detailThumbs">
+                      {images.map((img, idx) => (
+                        <button
+                          key={img.id ?? `${img.url}-${idx}`}
+                          type="button"
+                          className={`detailThumbBtn ${
+                            idx === activeIdx ? "detailThumbBtnActive" : ""
+                          }`}
+                          onClick={() => setActiveIdx(idx)}
+                        >
+                          <img
+                            src={img.url}
+                            alt={`Slika ${idx + 1}`}
+                            className="detailThumbImage"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="card detailInfoCard">
+                <h2 className="detailSectionTitle">Podrobnosti oglasa</h2>
+
+                <div className="detailSpecsGrid">
+                  <div className="detailSpecItem">
+                    <span>Tip</span>
+                    <strong>{oglas.type || "—"}</strong>
+                  </div>
+
+                  <div className="detailSpecItem">
+                    <span>Lokacija</span>
+                    <strong>{oglas.location || "—"}</strong>
+                  </div>
+
+                  <div className="detailSpecItem">
+                    <span>Znamka</span>
+                    <strong>{oglas.brand || "—"}</strong>
+                  </div>
+
+                  <div className="detailSpecItem">
+                    <span>Model</span>
+                    <strong>{oglas.model || "—"}</strong>
+                  </div>
+
+                  <div className="detailSpecItem">
+                    <span>Letnik</span>
+                    <strong>{oglas.year ?? "—"}</strong>
+                  </div>
+
+                  <div className="detailSpecItem">
+                    <span>Kilometri</span>
+                    <strong>
+                      {oglas.km
+                        ? `${Number(oglas.km).toLocaleString("sl-SI")} km`
+                        : "—"}
+                    </strong>
+                  </div>
+
+                  <div className="detailSpecItem">
+                    <span>Gorivo</span>
+                    <strong>{oglas.fuel || "—"}</strong>
+                  </div>
+
+                  <div className="detailSpecItem">
+                    <span>Stanje</span>
+                    <strong>{oglas.condition || "—"}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {oglas.description ? (
+                <div className="card detailDescriptionCard">
+                  <h2 className="detailSectionTitle">Opis</h2>
+                  <p className="detailDescriptionText">{oglas.description}</p>
+                </div>
+              ) : null}
+            </section>
+
+            <aside className="detailSidebar">
+              <div id="kontakt" className="card sellerCard">
+                <div className="sellerTop">
+                  <div>
+                    <div className="sellerTitle">Prodajalec</div>
+                    <div className="sellerName">
+                      {oglas?.user?.username || "—"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sellerContactBlock">
+                  <div className="sellerLabel">Telefon</div>
+
+                  {oglas?.user?.phone ? (
+                    showPhone ? (
+                      <a
+                        href={`tel:${String(oglas.user.phone).replace(/\s+/g, "")}`}
+                        className="sellerPhoneLink"
+                      >
+                        {oglas.user.phone}
+                      </a>
+                    ) : (
+                      <button
+                        className="btn btnPrimary sellerPhoneBtn"
+                        type="button"
+                        onClick={() => setShowPhone(true)}
+                      >
+                        Pokaži telefon
+                      </button>
+                    )
+                  ) : (
+                    <div className="sellerMuted">
+                      Prodajalec ni dodal telefona.
+                    </div>
+                  )}
+                </div>
+
+                <div className="sellerActions">
+                  <button
+                    className="btn btnPrimary"
+                    type="button"
+                    onClick={() => {
+                      if (oglas?.user?.phone) setShowPhone(true);
+                      const el = document.getElementById("kontakt");
+                      if (el) {
+                        el.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }
+                    }}
+                  >
+                    Kontaktiraj
+                  </button>
+
+                  {isOwner && (
+                    <>
+                      <Link className="btn" href={`/oglasi/${oglas.id}/edit`}>
+                        Uredi
+                      </Link>
+                      <DeleteButton id={oglas.id} />
+                    </>
+                  )}
+                </div>
+
+                {!isOwner && (
+                  <div className="sellerMuted sellerFoot">
+                    Urejanje in brisanje je na voljo samo lastniku oglasa.
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
         </div>
       </div>

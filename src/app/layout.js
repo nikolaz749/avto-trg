@@ -1,4 +1,5 @@
 import "./globals.css";
+import Navbar from "@/app/components/Navbar";
 
 export const metadata = {
   title: "Avto Trg",
@@ -8,7 +9,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="sl">
-      <body>{children}</body>
+      <body>
+        <Navbar />
+        {children}
+      </body>
     </html>
   );
 }
