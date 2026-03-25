@@ -114,6 +114,10 @@ export async function POST(request) {
     return NextResponse.json(withImages, { status: 201 });
   } catch (e) {
     console.error("POST /api/oglasi error:", e);
-    return NextResponse.json({ error: "Napaka pri shranjevanju." }, { status: 500 });
+
+    return NextResponse.json(
+      { error: `Napaka pri shranjevanju: ${e?.message || "unknown"}` },
+      { status: 500 }
+    );
   }
 }
