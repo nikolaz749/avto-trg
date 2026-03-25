@@ -8,12 +8,48 @@ export async function GET(request) {
 
   const page = Math.max(1, Number(url.searchParams.get("page") || 1));
   const limit = Math.min(48, Math.max(1, Number(url.searchParams.get("limit") || 12)));
-
   const skip = (page - 1) * limit;
 
+  const tip = (url.searchParams.get("tip") || "").trim();
+  const q = (url.searchParams.get("q") || "").trim();
+  const znamka = (url.searchParams.get("znamka") || "").trim();
+  const model = (url.searchParams.get("model") || "").trim();
+  const stanje = (url.searchParams.get("stanje") || "").trim();
+  const minPriceRaw = (url.searchParams.get("minPrice") || "").trim();
+  const maxPriceRaw = (url.searchParams.get("maxPrice") || "").trim();
+
+  const minPrice = minPriceRaw ? Number(minPriceRaw) : null;
+  const maxPrice = maxPriceRaw ? Number(maxPriceRaw) : null;
+
+  const where = {
+    ...(tip ? { type: tip } : {}),
+    ...(znamka ? { brand: znamka } : {}),
+    ...(model ? { model } : {}),
+    ...(stanje ? { condition: stanje } : {}),
+    ...(q
+      ? {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { location: { contains: q, mode: "insensitive" } },
+            { brand: { contains: q, mode: "insensitive" } },
+            { model: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+    ...((minPrice !== null || maxPrice !== null)
+      ? {
+          price: {
+            ...(minPrice !== null && !Number.isNaN(minPrice) ? { gte: minPrice } : {}),
+            ...(maxPrice !== null && !Number.isNaN(maxPrice) ? { lte: maxPrice } : {}),
+          },
+        }
+      : {}),
+  };
+
   const [totalCount, items] = await Promise.all([
-    prisma.listing.count(),
+    prisma.listing.count({ where }),
     prisma.listing.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,
@@ -47,7 +83,6 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
 
-    // 1) polja
     const title = String(formData.get("title") || "").trim();
     const type = String(formData.get("type") || "avti");
     const price = Number(formData.get("price"));
@@ -59,7 +94,6 @@ export async function POST(request) {
       return NextResponse.json({ error: "Price is invalid" }, { status: 400 });
     }
 
-    // 2) slike (1..10)
     const files = formData.getAll("images");
     if (!files || files.length < 1) {
       return NextResponse.json({ error: "Dodaj vsaj 1 sliko." }, { status: 400 });
@@ -68,7 +102,6 @@ export async function POST(request) {
       return NextResponse.json({ error: "Max je 10 slik." }, { status: 400 });
     }
 
-    // 3) najprej naredimo oglas
     const created = await prisma.listing.create({
       data: {
         title,
@@ -85,10 +118,8 @@ export async function POST(request) {
       },
     });
 
-    // 4) upload slik + zapis v bazo
     const uploaded = [];
     for (const file of files) {
-      // file je Web File
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
@@ -105,7 +136,6 @@ export async function POST(request) {
 
     await prisma.listingImage.createMany({ data: uploaded });
 
-    // 5) vrnemo oglas z slikami
     const withImages = await prisma.listing.findUnique({
       where: { id: created.id },
       include: { images: true },

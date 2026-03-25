@@ -44,7 +44,19 @@ function OglasiPageContent() {
       try {
         setLoading(true);
 
-        const res = await fetch(`/api/oglasi?page=${page}&limit=12`, {
+        const params = new URLSearchParams();
+        params.set("page", String(page));
+        params.set("limit", "12");
+
+        if (tip) params.set("tip", tip);
+        if (q.trim()) params.set("q", q.trim());
+        if (make) params.set("znamka", make);
+        if (model) params.set("model", model);
+        if (condition) params.set("stanje", condition);
+        if (minPrice) params.set("minPrice", minPrice);
+        if (maxPrice) params.set("maxPrice", maxPrice);
+
+        const res = await fetch(`/api/oglasi?${params.toString()}`, {
           cache: "no-store",
         });
         const data = await res.json();
@@ -81,7 +93,7 @@ function OglasiPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [page]);
+  }, [page, tip, q, make, model, condition, minPrice, maxPrice]);
 
   async function toggleFavorite(listingId) {
     try {
@@ -112,44 +124,26 @@ function OglasiPageContent() {
   const makes = useMemo(() => {
     const set = new Set();
 
-    listings
-      .filter((x) => x.type === tip)
-      .forEach((x) => {
-        if (x.brand) set.add(x.brand);
-      });
+    listings.forEach((x) => {
+      if (x.brand) set.add(x.brand);
+    });
 
     return Array.from(set).sort();
-  }, [listings, tip]);
+  }, [listings]);
 
   const models = useMemo(() => {
     const set = new Set();
 
     listings
-      .filter((x) => x.type === tip)
       .filter((x) => (make ? x.brand === make : true))
       .forEach((x) => {
         if (x.model) set.add(x.model);
       });
 
     return Array.from(set).sort();
-  }, [listings, tip, make]);
+  }, [listings, make]);
 
-  const results = useMemo(() => {
-    const qq = q.trim().toLowerCase();
-    const min = minPrice ? Number(minPrice) : null;
-    const max = maxPrice ? Number(maxPrice) : null;
-
-    return listings
-      .filter((x) => x.type === tip)
-      .filter((x) =>
-        qq ? `${x.title} ${x.location || ""}`.toLowerCase().includes(qq) : true
-      )
-      .filter((x) => (make ? x.brand === make : true))
-      .filter((x) => (model ? x.model === model : true))
-      .filter((x) => (condition ? x.condition === condition : true))
-      .filter((x) => (min != null ? x.price >= min : true))
-      .filter((x) => (max != null ? x.price <= max : true));
-  }, [listings, tip, q, make, model, condition, minPrice, maxPrice]);
+  const results = listings;
 
   return (
     <main className="section">
