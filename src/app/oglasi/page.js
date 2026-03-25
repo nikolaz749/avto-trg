@@ -17,11 +17,15 @@ function OglasiPageContent() {
 
   const urlTip = sp.get("tip") || "avti";
   const urlQ = sp.get("q") || "";
+  const urlMake = sp.get("znamka") || "";
+  const urlModel = sp.get("model") || "";
+  const urlCondition = sp.get("stanje") || "";
 
   const [tip, setTip] = useState(urlTip);
   const [q, setQ] = useState(urlQ);
-  const [make, setMake] = useState("");
-  const [model, setModel] = useState("");
+  const [make, setMake] = useState(urlMake);
+  const [model, setModel] = useState(urlModel);
+  const [condition, setCondition] = useState(urlCondition);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 
@@ -142,9 +146,10 @@ function OglasiPageContent() {
       )
       .filter((x) => (make ? x.brand === make : true))
       .filter((x) => (model ? x.model === model : true))
+      .filter((x) => (condition ? x.condition === condition : true))
       .filter((x) => (min != null ? x.price >= min : true))
       .filter((x) => (max != null ? x.price <= max : true));
-  }, [listings, tip, q, make, model, minPrice, maxPrice]);
+  }, [listings, tip, q, make, model, condition, minPrice, maxPrice]);
 
   return (
     <main className="section">
@@ -177,6 +182,7 @@ function OglasiPageContent() {
                     setTip(e.target.value);
                     setMake("");
                     setModel("");
+                    setCondition("");
                     setPage(1);
                   }}
                 >
@@ -241,6 +247,22 @@ function OglasiPageContent() {
               </div>
 
               <div className="filterGroup">
+                <label className="filterLabel">Stanje</label>
+                <select
+                  className="select"
+                  value={condition}
+                  onChange={(e) => {
+                    setCondition(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Vsa stanja</option>
+                  <option value="rabljeno">Rabljeno</option>
+                  <option value="novo">Novo</option>
+                </select>
+              </div>
+
+              <div className="filterGroup">
                 <label className="filterLabel">Cena (EUR)</label>
                 <div className="priceRow">
                   <input
@@ -271,6 +293,7 @@ function OglasiPageContent() {
                   setQ("");
                   setMake("");
                   setModel("");
+                  setCondition("");
                   setMinPrice("");
                   setMaxPrice("");
                   setPage(1);
