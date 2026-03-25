@@ -397,6 +397,13 @@ export default function ObjaviPage() {
         </option>
       ))}
     </select>
+   <div style={{ color: "red", fontSize: 12 }}>
+  COUNT: {CAR_BRANDS.length}
+</div>
+
+
+
+
   </div>
 
   <div>
