@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
+import { CAR_BRANDS } from "@/app/lib/carBrands";
 export default function ObjaviPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -140,7 +140,7 @@ export default function ObjaviPage() {
               Objavi oglas
             </h2>
             <div style={{ color: "var(--muted)", fontSize: 13 }}>
-              Shrani v bazo (SQLite)
+              Shrani v bazo (PostgreSQL)
             </div>
           </div>
           <Link className="btn" href="/">
@@ -381,26 +381,71 @@ export default function ObjaviPage() {
               </div>
             </div>
 
-            <div className="grid2">
-              <div>
-                <label style={{ fontSize: 12, color: "var(--muted)" }}>Znamka</label>
-                <input
-                  className="input"
-                  value={form.brand}
-                  onChange={(e) => setField("brand", e.target.value)}
-                  placeholder="npr. BMW"
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: "var(--muted)" }}>Model</label>
-                <input
-                  className="input"
-                  value={form.model}
-                  onChange={(e) => setField("model", e.target.value)}
-                  placeholder="npr. 320d"
-                />
-              </div>
-            </div>
+        <div className="grid2">
+  <div>
+    <label style={{ fontSize: 12, color: "var(--muted)" }}>Znamka</label>
+    <select
+      className="select"
+      value={form.brand}
+      onChange={(e) => setField("brand", e.target.value)}
+      required
+    >
+      <option value="">Izberi znamko</option>
+      {CAR_BRANDS.map((brand) => (
+        <option key={brand} value={brand}>
+          {brand}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <label style={{ fontSize: 12, color: "var(--muted)" }}>Model</label>
+    <input
+      className="input"
+      value={form.model}
+      onChange={(e) => setField("model", e.target.value)}
+      placeholder="npr. 320d"
+    />
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             <div className="grid2">
               <div>
