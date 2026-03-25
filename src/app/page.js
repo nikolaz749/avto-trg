@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CAR_BRANDS } from "@/app/lib/carBrands";
 
-const MAKES = {
+const FEATURED_MODELS = {
   Audi: ["A3", "A4", "Q5"],
   BMW: ["320d", "X3", "X5"],
   Mercedes: ["C 220", "E 220", "GLC"],
+  "Mercedes-Benz": ["C 220", "E 220", "GLC"],
   Volkswagen: ["Golf", "Passat", "Tiguan"],
   Renault: ["Clio", "Megane", "Kadjar"],
   Peugeot: ["208", "308", "3008"],
@@ -18,17 +20,63 @@ const MAKES = {
 
 export default function HomePage() {
   const router = useRouter();
+  const brandBoxRef = useRef(null);
 
   const [make, setMake] = useState("Volkswagen");
   const [model, setModel] = useState("Golf");
   const [condition, setCondition] = useState("rabljeno");
 
-  const models = MAKES[make] || [];
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [brandQuery, setBrandQuery] = useState("");
+
+  const models = FEATURED_MODELS[make] || ["Vsi modeli"];
+
+  const filteredBrands = useMemo(() => {
+    const q = brandQuery.trim().toLowerCase();
+    if (!q) return CAR_BRANDS;
+    return CAR_BRANDS.filter((brand) => brand.toLowerCase().includes(q));
+  }, [brandQuery]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (brandBoxRef.current && !brandBoxRef.current.contains(e.target)) {
+        setBrandOpen(false);
+      }
+    }
+
+    function handleEscape(e) {
+      if (e.key === "Escape") {
+        setBrandOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  function chooseBrand(nextMake) {
+    setMake(nextMake);
+    const nextModels = FEATURED_MODELS[nextMake] || ["Vsi modeli"];
+    setModel(nextModels[0]);
+    setBrandOpen(false);
+    setBrandQuery("");
+  }
 
   function goSearch() {
     const params = new URLSearchParams();
     params.set("znamka", make);
-    params.set("model", model);
+
+    if (model && model !== "Vsi modeli") {
+      params.set("model", model);
+    }
+
     params.set("stanje", condition);
     router.push(`/oglasi?${params.toString()}`);
   }
@@ -71,21 +119,96 @@ export default function HomePage() {
               </div>
 
               <div className="grid3 heroFormGrid">
-                <select
-                  value={make}
-                  onChange={(e) => {
-                    const nextMake = e.target.value;
-                    setMake(nextMake);
-                    setModel(MAKES[nextMake][0]);
-                  }}
-                  className="select"
+                <div
+                  ref={brandBoxRef}
+                  style={{ position: "relative", width: "100%" }}
                 >
-                  {Object.keys(MAKES).map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
+                  <button
+                    type="button"
+                    onClick={() => setBrandOpen((v) => !v)}
+                    className="select"
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span>{make || "Izberi znamko"}</span>
+                    <span style={{ marginLeft: 10, fontSize: 12 }}>▾</span>
+                  </button>
+
+                  {brandOpen && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 6px)",
+                        left: 0,
+                        width: "100%",
+                        zIndex: 50,
+                        background: "#fff",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 12,
+                        boxShadow: "0 12px 30px rgba(0,0,0,0.12)",
+                        padding: 8,
+                      }}
+                    >
+                      <input
+                        className="input"
+                        placeholder="Išči znamko..."
+                        value={brandQuery}
+                        onChange={(e) => setBrandQuery(e.target.value)}
+                        autoFocus
+                        style={{ marginBottom: 8 }}
+                      />
+
+                      <div
+                        style={{
+                          maxHeight: 220,
+                          overflowY: "auto",
+                          WebkitOverflowScrolling: "touch",
+                          touchAction: "pan-y",
+                          borderRadius: 8,
+                          border: "1px solid #f1f5f9",
+                        }}
+                      >
+                        {filteredBrands.length === 0 ? (
+                          <div
+                            style={{
+                              padding: "10px 12px",
+                              fontSize: 14,
+                              color: "var(--muted)",
+                            }}
+                          >
+                            Ni zadetkov.
+                          </div>
+                        ) : (
+                          filteredBrands.map((brand) => (
+                            <button
+                              key={brand}
+                              type="button"
+                              onClick={() => chooseBrand(brand)}
+                              style={{
+                                width: "100%",
+                                textAlign: "left",
+                                padding: "10px 12px",
+                                border: "none",
+                                borderBottom: "1px solid #f1f5f9",
+                                background: brand === make ? "#f5f3ff" : "#fff",
+                                cursor: "pointer",
+                                fontSize: 14,
+                              }}
+                            >
+                              {brand}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <select
                   value={model}
@@ -99,7 +222,11 @@ export default function HomePage() {
                   ))}
                 </select>
 
-                <button type="button" className="btn btnPrimary heroSearchBtn" onClick={goSearch}>
+                <button
+                  type="button"
+                  className="btn btnPrimary heroSearchBtn"
+                  onClick={goSearch}
+                >
                   Poišči oglase
                 </button>
               </div>
@@ -163,7 +290,7 @@ export default function HomePage() {
           <h2 className="h2">Priljubljene znamke</h2>
 
           <div className="chips">
-            {Object.keys(MAKES).map((makeName) => (
+            {CAR_BRANDS.slice(0, 12).map((makeName) => (
               <Link
                 key={makeName}
                 href={`/oglasi?znamka=${encodeURIComponent(makeName)}`}

@@ -382,27 +382,65 @@ export default function ObjaviPage() {
             </div>
 
         <div className="grid2">
-  <div>
-    <label style={{ fontSize: 12, color: "var(--muted)" }}>Znamka</label>
-    <select
-      className="select"
-      value={form.brand}
-      onChange={(e) => setField("brand", e.target.value)}
-      required
-    >
-      <option value="">Izberi znamko</option>
-      {CAR_BRANDS.map((brand) => (
-        <option key={brand} value={brand}>
-          {brand}
-        </option>
-      ))}
-    </select>
 
 
+<div>
+  <label style={{ fontSize: 12, color: "var(--muted)" }}>Znamka</label>
+  <select
+    value={form.brand}
+    onChange={(e) => setField("brand", e.target.value)}
+    required
+    size={8}
+    style={{
+      width: "100%",
+      minHeight: 220,
+      padding: 10,
+      borderRadius: 12,
+      border: "1px solid #d1d5db",
+      background: "white",
+      outline: "none",
+    }}
+  >
+    <option value="">Izberi znamko</option>
+    {CAR_BRANDS.map((brand) => (
+      <option key={brand} value={brand}>
+        {brand}
+      </option>
+    ))}
+  </select>
 
-
-
+  <div className="smallMuted" style={{ marginTop: 6 }}>
+    Scrollaj po seznamu in izberi znamko.
   </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   <div>
     <label style={{ fontSize: 12, color: "var(--muted)" }}>Model</label>
