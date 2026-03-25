@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CAR_BRANDS } from "@/app/lib/carBrands";
-
+import { CAR_MODELS } from "@/app/lib/carModels";
 const FEATURED_MODELS = {
   Audi: ["A3", "A4", "Q5"],
   BMW: ["320d", "X3", "X5"],
@@ -29,7 +29,7 @@ export default function HomePage() {
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandQuery, setBrandQuery] = useState("");
 
-  const models = FEATURED_MODELS[make] || ["Vsi modeli"];
+  const models = CAR_MODELS[make] || ["Vsi modeli"];
 
   const filteredBrands = useMemo(() => {
     const q = brandQuery.trim().toLowerCase();
@@ -63,7 +63,7 @@ export default function HomePage() {
 
   function chooseBrand(nextMake) {
     setMake(nextMake);
-    const nextModels = FEATURED_MODELS[nextMake] || ["Vsi modeli"];
+    const nextModels = CAR_MODELS[nextMake] || ["Vsi modeli"];
     setModel(nextModels[0]);
     setBrandOpen(false);
     setBrandQuery("");
