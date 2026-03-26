@@ -94,12 +94,12 @@ a {
   cursor: pointer;
 }
 
-.logo {
+/* .logo {
   width: 34px;
   height: 34px;
   border-radius: 10px;
   background: linear-gradient(135deg, var(--primary2), var(--primary));
-}
+} */
 
 .navlinks {
   display: flex;
@@ -1228,10 +1228,4 @@ html {
 /* image hover feel */
 img {
   transition: transform .3s ease;
-}
-/* desktop logo */
-@media (min-width: 768px) {
-  .logo {
-    height: 100px;
-  }
 }
