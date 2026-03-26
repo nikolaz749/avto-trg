@@ -1229,3 +1229,9 @@ html {
 img {
   transition: transform .3s ease;
 }
+/* desktop logo */
+@media (min-width: 768px) {
+  .logo {
+    height: 100px;
+  }
+}

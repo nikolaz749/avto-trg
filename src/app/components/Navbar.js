@@ -49,12 +49,13 @@ export default function Navbar() {
             src="/logo.png"
             alt="Avto Trg"
             style={{
-              height: 100,
+              height: "110px",
               width: "auto",
               display: "block",
               objectFit: "contain"
             
             }}
+              className="logo"
           />
         </Link>
 
