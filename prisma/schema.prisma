@@ -30,6 +30,7 @@ model Listing {
   fuel         String
   brand        String
   model        String
+  description  String?
   condition    String
   type         String
   status       String         @default("ACTIVE")

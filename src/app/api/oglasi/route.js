@@ -113,6 +113,7 @@ export async function POST(request) {
         fuel: String(formData.get("fuel") || "").trim(),
         brand: String(formData.get("brand") || "").trim(),
         model: String(formData.get("model") || "").trim(),
+        description: String(formData.get("description") || "").trim(),
         condition: String(formData.get("condition") || "").trim(),
         userId: user.id,
       },

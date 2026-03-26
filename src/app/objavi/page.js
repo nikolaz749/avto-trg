@@ -47,6 +47,7 @@ export default function ObjaviPage() {
     fuel: "",
     brand: "",
     model: "",
+    description: "",
     condition: "rabljeno",
     type: "avti",
   });
@@ -85,6 +86,7 @@ export default function ObjaviPage() {
       fd.append("fuel", form.fuel);
       fd.append("brand", form.brand);
       fd.append("model", form.model);
+      fd.append("description", form.description);
       fd.append("condition", form.condition);
 
       for (const file of images) {
@@ -411,7 +413,14 @@ export default function ObjaviPage() {
                 </select>
               </div>
             </div>
-
+            <label style={{ fontSize: 12, color: "var(--muted)" }}>Opis oglasa</label>
+            <textarea
+               className="input"
+               value={form.description}
+               onChange={(e) => setField("description", e.target.value)}
+               placeholder="npr. Avto je redno servisiran, garažiran, brez poškodb..."
+               rows={5}
+             />
             <button className="btn btnPrimary" disabled={loading}>
               {loading ? "Shranjujem..." : "Objavi oglas"}
             </button>
