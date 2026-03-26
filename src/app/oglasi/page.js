@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 function eur(n) {
@@ -14,6 +14,7 @@ function eur(n) {
 
 function OglasiPageContent() {
   const sp = useSearchParams();
+  const router = useRouter();
 
   const urlTip = sp.get("tip") || "avti";
   const urlQ = sp.get("q") || "";
@@ -32,10 +33,36 @@ function OglasiPageContent() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(Math.max(1, Number(sp.get("page") || 1)));
   const [totalPages, setTotalPages] = useState(1);
 
   const [favoriteIds, setFavoriteIds] = useState(new Set());
+ useEffect(() => {
+  setTip(sp.get("tip") || "avti");
+  setQ(sp.get("q") || "");
+  setMake(sp.get("znamka") || "");
+  setModel(sp.get("model") || "");
+  setCondition(sp.get("stanje") || "");
+  setMinPrice(sp.get("minPrice") || "");
+  setMaxPrice(sp.get("maxPrice") || "");
+  setPage(Math.max(1, Number(sp.get("page") || 1)));
+ }, [sp]);
+
+ useEffect(() => {
+  const params = new URLSearchParams();
+
+   if (tip && tip !== "avti") params.set("tip", tip);
+   if (q.trim()) params.set("q", q.trim());
+   if (make) params.set("znamka", make);
+   if (model) params.set("model", model);
+   if (condition) params.set("stanje", condition);
+   if (minPrice) params.set("minPrice", minPrice);
+   if (maxPrice) params.set("maxPrice", maxPrice);
+   if (page > 1) params.set("page", String(page));
+
+   const qs = params.toString();
+   router.replace(qs ? `/oglasi?${qs}` : "/oglasi", { scroll: false });
+ }, [router, tip, q, make, model, condition, minPrice, maxPrice, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +193,109 @@ function OglasiPageContent() {
                 <div className="filtersTitle">Filtri</div>
                 <div className="filtersHint">Prilagodi prikaz oglasov</div>
               </div>
+                  
+               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+  {make && (
+    <button
+      type="button"
+      onClick={() => {
+        setMake("");
+        setModel("");
+        setPage(1);
+      }}
+      style={{
+        border: "1px solid #e5e7eb",
+        background: "#f8fafc",
+        borderRadius: 999,
+        padding: "6px 10px",
+        fontSize: 12,
+        cursor: "pointer",
+      }}
+    >
+      {make} ✕
+    </button>
+  )}
+
+  {model && (
+    <button
+      type="button"
+      onClick={() => {
+        setModel("");
+        setPage(1);
+      }}
+      style={{
+        border: "1px solid #e5e7eb",
+        background: "#f8fafc",
+        borderRadius: 999,
+        padding: "6px 10px",
+        fontSize: 12,
+        cursor: "pointer",
+      }}
+    >
+      {model} ✕
+    </button>
+  )}
+
+  {condition && (
+    <button
+      type="button"
+      onClick={() => {
+        setCondition("");
+        setPage(1);
+      }}
+      style={{
+        border: "1px solid #e5e7eb",
+        background: "#f8fafc",
+        borderRadius: 999,
+        padding: "6px 10px",
+        fontSize: 12,
+        cursor: "pointer",
+      }}
+    >
+      {condition} ✕
+    </button>
+  )}
+
+  {minPrice && (
+    <button
+      type="button"
+      onClick={() => {
+        setMinPrice("");
+        setPage(1);
+      }}
+      style={{
+        border: "1px solid #e5e7eb",
+        background: "#f8fafc",
+        borderRadius: 999,
+        padding: "6px 10px",
+        fontSize: 12,
+        cursor: "pointer",
+      }}
+    >
+      od {minPrice} € ✕
+    </button>
+  )}
+
+  {maxPrice && (
+    <button
+      type="button"
+      onClick={() => {
+        setMaxPrice("");
+        setPage(1);
+      }}
+      style={{
+        border: "1px solid #e5e7eb",
+        background: "#f8fafc",
+        borderRadius: 999,
+        padding: "6px 10px",
+        fontSize: 12,
+        cursor: "pointer",
+      }}
+    >
+      do {maxPrice} € ✕
+    </button>
+  )}
+</div>
 
               <div className="filterGroup">
                 <label className="filterLabel">Tip</label>
